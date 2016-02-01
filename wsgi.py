@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import os
 
-index = open('index.html').read()
+BASE_PATH = os.path.dirname(__file__)
+index = open(os.path.join(BASE_PATH, 'index.html')).read()
+
 
 def application(environ, start_response):
 
