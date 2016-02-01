@@ -15,4 +15,4 @@ while True:
         'content': req.content,
         'datetime': datetime.datetime.now()
     })
-    time.sleep(30)
+    time.sleep(10)
