@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import os
 
+index = open('index.html').read()
+
 def application(environ, start_response):
 
     ctype = 'text/plain'
@@ -280,6 +282,7 @@ $ git push</pre>
 </section>
 </body>
 </html>'''
+    response_body = index
     response_body = response_body.encode('utf-8')
 
     status = '200 OK'
