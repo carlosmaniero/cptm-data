@@ -8,6 +8,7 @@ db = conn.cptm
 
 BASE_PATH = os.path.dirname(__file__)
 index = open(os.path.join(BASE_PATH, 'index.html')).read()
+index.decode("utf8")
 
 
 def application(environ, start_response):
