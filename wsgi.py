@@ -7,8 +7,7 @@ conn = pymongo.Connection(os.environ['OPENSHIFT_MONGODB_DB_URL'])
 db = conn.cptm
 
 BASE_PATH = os.path.dirname(__file__)
-index = open(os.path.join(BASE_PATH, 'index.html')).read()
-index.decode("utf8")
+index = open(os.path.join(BASE_PATH, 'index.html'), encoding='utf-8').read()
 
 
 def application(environ, start_response):
