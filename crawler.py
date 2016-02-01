@@ -6,7 +6,7 @@ import time
 import datetime
 
 conn = pymongo.Connection(os.environ['OPENSHIFT_MONGODB_DB_URL'])
-db = conn.requests
+db = conn.status
 
 while True:
     req = requests.get('http://cptm.sp.gov.br/Pages/Home.aspx')
