@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 import os
+import pymongo
 
 BASE_PATH = os.path.dirname(__file__)
 index = open(os.path.join(BASE_PATH, 'index.html'), encoding='utf-8').read()
 
+url = os.environ.get('OPENSHIFT_MONGODB_DB_URL')
+debug = os.environ.get('DEBUG_MODE', False)
+conn = pymongo.Connection(url)
+db = conn.cptm
 
 def application(environ, start_response):
 
