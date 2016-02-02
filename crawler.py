@@ -62,7 +62,7 @@ def get_requests(loop):
         except:
             # TODO: Put log here
             pass
-        yield from asyncio.sleep(10)
+        yield from asyncio.sleep(30)
 
 
 @asyncio.coroutine
