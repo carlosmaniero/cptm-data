@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 import os
-import pymongo
-
-conn = pymongo.Connection(os.environ['OPENSHIFT_MONGODB_DB_URL'])
-db = conn.cptm
 
 BASE_PATH = os.path.dirname(__file__)
 index = open(os.path.join(BASE_PATH, 'index.html'), encoding='utf-8').read()
@@ -16,16 +12,15 @@ def application(environ, start_response):
     if environ['PATH_INFO'] == '/health':
         response_body = "1"
     elif environ['PATH_INFO'] == '/env':
-        response_body = ['%s: %s' % (key, value)
-                    for key, value in sorted(environ.items())]
+        response_body = ['%s: %s' % (key, value) for key, value in sorted(environ.items())]
         response_body = '\n'.join(response_body)
     else:
         ctype = 'text/html'
-    response_body = index.format(
-        total=db.requests.count(),
-        processed=db.requests.find(processed=True).count()
-    )
-    response_body = response_body.encode('utf-8')
+        response_body = index.format(
+            total=db.requests.count(),
+            processed=db.requests.find(processed=True).count()
+        )
+        response_body = response_body.encode('utf-8')
 
     status = '200 OK'
     response_headers = [('Content-Type', ctype), ('Content-Length', str(len(response_body)))]
