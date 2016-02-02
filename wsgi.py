@@ -21,7 +21,10 @@ def application(environ, start_response):
         response_body = '\n'.join(response_body)
     else:
         ctype = 'text/html'
-    response_body = index.format(total=db.requests.count())
+    response_body = index.format(
+        total=db.requests.count(),
+        processed=db.requests.find(processed=True).count()
+    )
     response_body = response_body.encode('utf-8')
 
     status = '200 OK'
