@@ -6,12 +6,14 @@ import time
 import datetime
 import asyncio
 import time
+from jinja2 import Template
 from bs4 import BeautifulSoup
 
 url = os.environ.get('OPENSHIFT_MONGODB_DB_URL')
 debug = os.environ.get('DEBUG_MODE', False)
 conn = pymongo.Connection(url)
 db = conn.cptm
+BASE_PATH = os.path.dirname(__file__)
 
 
 def find_one_request(processed=False, processing=False):
@@ -120,6 +122,40 @@ def process_requests(loop):
 
 
 @asyncio.coroutine
+def generate_index(loop):
+    while True:
+        print('[Template]: Start template generation')
+        template_file = os.path.join(BASE_PATH, 'template.html')
+        template = open(template_file, encoding='utf-8').read()
+
+        latest = yield from loop.run_in_executor(
+            None,
+            db.requests.find({'processed': True}).sort([('_id', -1)]).limit,
+            1
+        )
+        latest = latest[0]
+
+        total = yield from loop.run_in_executor(
+            None,
+            db.requests.count
+        )
+        processed = yield from loop.run_in_executor(
+            None,
+            db.requests.find(processed=True).count
+        )
+        context = {
+            'latest': latest,
+            'total': total,
+            'processed': processed
+        }
+        index = Template(template).render(**context)
+        index_file = os.path.join(BASE_PATH, 'index.html')
+        open(index_file, 'w').write(index)
+        print('[Template]: End template generation')
+        yield from asyncio.sleep(10)
+
+
+@asyncio.coroutine
 def check_for_blocking():
     while True:
         print('[RUN]: OK')
@@ -131,6 +167,7 @@ if __name__ == '__main__':
     tasks = [
         get_requests(loop),
         process_requests(loop),
+        generate_index(loop)
     ]
     if debug:
         tasks += [check_for_blocking()]
