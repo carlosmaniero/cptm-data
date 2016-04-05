@@ -41,7 +41,7 @@ def get_requests(loop):
         print('[Request]: Returned {} status in {} seconds'.format(
             response.status_code, request_time
         ))
-        yield from asyncio.sleep(1)
+        yield from asyncio.sleep(10)
 
 
 def pop_request():
