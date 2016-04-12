@@ -48,9 +48,28 @@ def pop_request():
     return db.requests.find_and_modify(remove=True)
 
 
+def get_problem_nature(info):
+    if 'Serviços de Manutenção' in info:
+        return 'maintenance'
+    return 'other'
+
+
 def get_status_line(soup, line):
     div_line = soup.findAll('div', {'class': line})[0]
-    return div_line.findAll('span')[1]['class'][0]
+    span_info = div_line.findAll('span')[1]
+    name = span_info['class'][0]
+    data = {
+        'name': name
+    }
+    try:
+        info = span_info['data-original-title']
+    except KeyError:
+        pass
+    else:
+        data['info'] = info
+        data['nature'] = get_problem_nature(info)
+
+    return data
 
 
 @asyncio.coroutine
@@ -101,7 +120,6 @@ def process_requests(loop):
 
                     request['status'] = status
                     request['process_time'] = time.time() - start_process
-                    request['processing'] = False
 
                     yield from loop.run_in_executor(
                         None, db.processed.save, request
@@ -155,7 +173,7 @@ def generate_index(loop):
             )
             first = first[0]
 
-            total = yield from loop.run_in_executor(
+            non_processed = yield from loop.run_in_executor(
                 None,
                 db.requests.count
             )
@@ -163,13 +181,59 @@ def generate_index(loop):
                 None,
                 db.processed.count
             )
+            errors = yield from loop.run_in_executor(
+                None,
+                db.errors.count
+            )
+            now = datetime.datetime.now()
+            interval = now - datetime.timedelta(days=1)
+            categories = []
+            data = []
+            data_errors = []
+            data_total = []
+
+            for i in range(1, 24):
+                categories.append(interval.strftime('%d/%m/%Y %H:%M:%S'))
+                end_interval = interval + datetime.timedelta(hours=1)
+
+                interval_requests = yield from loop.run_in_executor(
+                    None,
+                    db.processed.find({
+                        'response_datetime': {
+                            '$gte': interval,
+                            '$lt': end_interval
+                        }
+                    }).count
+                )
+                data.append(interval_requests)
+                interval_errors = yield from loop.run_in_executor(
+                    None,
+                    db.errors.find({
+                        'response_datetime': {
+                            '$gte': interval,
+                            '$lt': end_interval
+                        }
+                    }).count
+                )
+                data_errors.append(interval_errors)
+                data_total.append(interval_errors + interval_requests)
+
+                interval = end_interval
+
             latest['lines'] = latest['status'].items()
             context = {
                 'latest': latest,
                 'first': first,
-                'total': total,
+                'non_processed': non_processed,
                 'processed': processed,
-                'revision': revision
+                'errors': errors,
+                'revision': revision,
+                'responses_chart': {
+                    'categories': categories,
+                    'data': data,
+                    'data_errors': data_errors,
+                    'data_total': data_total
+                }
             }
             index = Template(template).render(**context)
             index_file = os.path.join(base_path, 'index.html')

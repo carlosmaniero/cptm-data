@@ -44,17 +44,24 @@
             <div class="jumbotron">
                 <p>Monitoramento das linhas da CPTM</p>
                 {% for line, status in latest['lines'] %}
-                    {% if status == 'status_normal' %}
+                    {% if status['name'] == 'status_normal' %}
                         <span class="label label-success">
                             {{ line }}
                         </span> 
                         <span class="label label-default margin-right">
                         normal
                         </span>
-                    {% else %}
-                        <span class="label label-success">
-                            {{ line }} 
+                    {% elif status['name'] == 'status_reduzida' %}
+                        <span class="label label-warning" title="{{ status['info'] }}">
+                            {{ line }}
+                        </span> 
+                        <span class="label label-default margin-right">
+                            velocidade reduzida
                         </span>
+                    {% else %}
+                        <span class="label label-danger" title="{{ status['info'] }}">
+                            {{ line }}
+                        </span> 
                         <span class="label label-default margin-right">
                             problema operacional
                         </span>
@@ -67,17 +74,38 @@
             <section class="col-md-6">
                 <div class="page-header">
                     <h4>
-                        <i class="glyphicon glyphicon-stats"></i>
-                        Estatísticas de Processamento
+                        <i class="glyphicon glyphicon-search"></i>
+                        Verificar estado das linhas por intervalo
                     </h4>
                 </div>
+                
+                <form action="">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Data de Início">
+                        <span class="input-group-addon" id="sizing-addon2">até</span>
+                        <input type="text" class="form-control" placeholder="Data Final">
+                        <span class="input-group-btn">
+                            <input type="submit" value="filtrar" class="btn btn-primary">
+                        </span>
+                    </div>
+                </form>
+            </section>
+        </div>
+        <section class="row">
+            <div class="page-header">
+                <h4>
+                    <i class="glyphicon glyphicon-stats"></i>
+                    Estatísticas de Processamento
+                </h4>
+            </div>
+            <div class="col-md-6">
                 <table class="table">
                     <tr>
                         <th class="col-md-4 text-right">
                             <i class="glyphicon glyphicon-download"></i>
                             Total de requisições:
                         </th>
-                        <td>{{ total + processed }}</td>
+                        <td>{{ non_processed + processed }}</td>
                     </tr>
                     <tr>
                         <th class="col-md-4 text-right">
@@ -101,28 +129,11 @@
                         <td>{{ first['response_datetime'].strftime('%d/%m/%Y %H:%M:%S') }}</td>
                     </tr>
                 </table>
-            </section>
-
-            <section class="col-md-6">
-                <div class="page-header">
-                    <h4>
-                        <i class="glyphicon glyphicon-search"></i>
-                        Verificar estado das linhas por intervalo
-                    </h4>
-                </div>
                 
-                <form action="">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Data de Início">
-                        <span class="input-group-addon" id="sizing-addon2">até</span>
-                        <input type="text" class="form-control" placeholder="Data Final">
-                        <span class="input-group-btn">
-                            <input type="submit" value="filtrar" class="btn btn-primary">
-                        </span>
-                    </div>
-                </form>
-            </section>
-        </div>
+            </div>
+            <div id="stat_chart" class="col-md-6"></div>
+        </section>
+        <div id="response_chart"></div>
 
         <footer>
             <hr>
@@ -151,5 +162,99 @@
         integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
         crossorigin="anonymous"
     ></script>
+
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+
+    <script>
+        $(function () {
+            $('#stat_chart').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'pie'
+                },
+                title: {
+                    text: ''
+                },
+                tooltip: {
+                    pointFormat: '{point.percentage:.1f}%<br>{point.info}'
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '{point.name}: {point.y} / {point.percentage:.1f} %',
+                            style: {
+                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                            }
+                        }
+                    }
+                },
+                series: [{
+                    colorByPoint: true,
+                    data: [{
+                        name: 'Requisições Processadas',
+                        y: {{ processed }},
+                        color: '#339966',
+                        sliced: true,
+                        selected: true
+                    }, {
+                        name: 'Não processadas',
+                        y: {{ non_processed }},
+                        color: '#333333'
+                    }, {
+                        name: 'Erros de Processamento',
+                        y: {{ errors }},
+                        color: '#993333',
+                        info: "Por problemas de conexão ou instabilidade do servidor."
+                    }, ]
+                }]
+            });
+
+            $('#response_chart').highcharts({
+                title: {
+                    text: 'Total de Requisições por Hora',
+                    x: -20 //center
+                },
+                xAxis: {
+                    categories: {{ responses_chart['categories'] }}
+                },
+                yAxis: {
+                    title: {
+                        text: 'Requisições'
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 1,
+                        color: '#808080'
+                    }]
+                },
+                legend: {
+                    layout: 'vertical',
+                    align: 'right',
+                    verticalAlign: 'middle',
+                    borderWidth: 0
+                },
+                series: [{
+                    name: 'Total',
+                    data: {{ responses_chart['data_total'] }},
+                    color: '#999999'
+                }, {
+                    name: 'Sucesso',
+                    data: {{ responses_chart['data'] }},
+                    color: '#00FF99'
+                }, {
+                    name: 'Erro',
+                    data: {{ responses_chart['data_errors'] }},
+                    color: '#FF9999'
+                }, ]
+            });
+        });
+    </script>
 </body>
 </html>

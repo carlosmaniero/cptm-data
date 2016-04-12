@@ -14,6 +14,8 @@ debug = os.environ.get('DEBUG_MODE', False)
 conn = pymongo.Connection(url)
 db = conn.cptm
 base_path = os.path.dirname(__file__)
+host = 'localhost'
+port = 6447
 
 
 def pop_request():
